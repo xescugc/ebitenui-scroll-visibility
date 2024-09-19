@@ -47,6 +47,11 @@ func main() {
 
 	//Create the container with the content that should be scrolled
 	content := widget.NewContainer(
+		widget.ContainerOpts.Layout(widget.NewRowLayout(
+			widget.RowLayoutOpts.Direction(widget.DirectionVertical),
+			widget.RowLayoutOpts.Spacing(20),
+		)),
+
 		widget.ContainerOpts.WidgetOpts(
 			widget.WidgetOpts.MouseButtonPressedHandler(func(args *widget.WidgetMouseButtonPressedEventArgs) {
 				fmt.Println("Pressed")
@@ -54,10 +59,48 @@ func main() {
 		),
 	)
 
+	for x := 0; x < 20; x++ {
+		//Capture x for use in callback
+		x := x
+		// construct a button
+		button := widget.NewButton(
+			// set general widget options
+			widget.ButtonOpts.WidgetOpts(
+				// instruct the container's anchor layout to center the button both horizontally and vertically
+				widget.WidgetOpts.LayoutData(widget.RowLayoutData{
+					Position: widget.RowLayoutPositionCenter,
+				}),
+			),
+
+			// specify the images to use
+			widget.ButtonOpts.Image(buttonImage),
+
+			// specify the button's text, the font face, and the color
+			widget.ButtonOpts.Text(fmt.Sprintf("Hello, World! - %d", x), face, &widget.ButtonTextColor{
+				Idle: color.NRGBA{0xdf, 0xf4, 0xff, 0xff},
+			}),
+
+			// specify that the button's text needs some padding for correct display
+			widget.ButtonOpts.TextPadding(widget.Insets{
+				Left:   30,
+				Right:  30,
+				Top:    5,
+				Bottom: 5,
+			}),
+
+			// add a handler that reacts to clicking the button
+			widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
+				println(fmt.Sprintf("Button %d Clicked!", x))
+			}),
+		)
+
+		// add the button as a child of the container
+		content.AddChild(button)
+	}
+
 	//Create the new ScrollContainer object
 	scrollContainerW := widget.NewScrollContainer(
 		//Set the content that will be scrolled
-		//widget.ScrollContainerOpts.Content(content),
 		widget.ScrollContainerOpts.Content(content),
 		//Tell the container to stretch the content width to match available space
 		widget.ScrollContainerOpts.StretchContentWidth(),
@@ -226,15 +269,10 @@ func main() {
 		normalBtnC,
 	)
 
-	//wrapperGC.AddChild(
 	rootContainer.AddChild(
 		switchC,
 		contentsC,
 	)
-
-	//rootContainer.AddChild(
-	//wrapperGC,
-	//)
 
 	// construct the UI
 	ui := ebitenui.UI{
