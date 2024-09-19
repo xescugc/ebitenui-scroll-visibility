@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image/color"
 	"log"
@@ -9,20 +10,14 @@ import (
 	"github.com/ebitenui/ebitenui"
 	"github.com/ebitenui/ebitenui/image"
 	"github.com/ebitenui/ebitenui/widget"
-	"github.com/golang/freetype/truetype"
 	"github.com/hajimehoshi/ebiten/v2"
-	"golang.org/x/image/font"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/image/font/gofont/goregular"
 )
 
 // Game object used by ebiten
 type game struct {
 	ui *ebitenui.UI
-
-	scrollContainer *widget.ScrollContainer
-	innerContainer1 *widget.Container
-	innerContainer2 *widget.Container
-	button          *widget.Button
 }
 
 func main() {
@@ -44,56 +39,19 @@ func main() {
 	)
 
 	//Create the container with the content that should be scrolled
-	content := widget.NewContainer(widget.ContainerOpts.Layout(widget.NewRowLayout(
-		widget.RowLayoutOpts.Direction(widget.DirectionVertical),
-		widget.RowLayoutOpts.Spacing(20),
-	)))
-
-	var btn1 *widget.Button
-	//Add 20 buttons to the scrollable content container
-	for x := 0; x < 20; x++ {
-		//Capture x for use in callback
-		x := x
-		// construct a button
-		button := widget.NewButton(
-			// set general widget options
-			widget.ButtonOpts.WidgetOpts(
-				// instruct the container's anchor layout to center the button both horizontally and vertically
-				widget.WidgetOpts.LayoutData(widget.RowLayoutData{Position: widget.RowLayoutPositionCenter}),
-			),
-
-			// specify the images to use
-			widget.ButtonOpts.Image(buttonImage),
-
-			// specify the button's text, the font face, and the color
-			widget.ButtonOpts.Text(fmt.Sprintf("Hello, World! - %d", x), face, &widget.ButtonTextColor{
-				Idle: color.NRGBA{0xdf, 0xf4, 0xff, 0xff},
+	content := widget.NewContainer(
+		widget.ContainerOpts.WidgetOpts(
+			widget.WidgetOpts.MouseButtonPressedHandler(func(args *widget.WidgetMouseButtonPressedEventArgs) {
+				//spew.Dump(args.Widget)
+				fmt.Println("Pressed")
 			}),
-
-			// specify that the button's text needs some padding for correct display
-			widget.ButtonOpts.TextPadding(widget.Insets{
-				Left:   30,
-				Right:  30,
-				Top:    5,
-				Bottom: 5,
-			}),
-
-			// add a handler that reacts to clicking the button
-			widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
-				println(fmt.Sprintf("Button %d Clicked!", x))
-			}),
-		)
-
-		// add the button as a child of the container
-		content.AddChild(button)
-		if btn1 == nil {
-			btn1 = button
-		}
-	}
+		),
+	)
 
 	//Create the new ScrollContainer object
-	scrollContainer := widget.NewScrollContainer(
+	scrollContainerW := widget.NewScrollContainer(
 		//Set the content that will be scrolled
+		//widget.ScrollContainerOpts.Content(content),
 		widget.ScrollContainerOpts.Content(content),
 		//Tell the container to stretch the content width to match available space
 		widget.ScrollContainerOpts.StretchContentWidth(),
@@ -103,12 +61,10 @@ func main() {
 			Mask: image.NewNineSliceColor(color.NRGBA{0x13, 0x1a, 0x22, 0xff}),
 		}),
 	)
-	//Add the scrollable container to the left side of the window
-	//rootContainer.AddChild(scrollContainer)
 
 	//Create a function to return the page size used by the slider
 	pageSizeFunc := func() int {
-		return int(math.Round(float64(scrollContainer.ViewRect().Dy()) / float64(content.GetWidget().Rect.Dy()) * 1000))
+		return int(math.Round(float64(scrollContainerW.ViewRect().Dy()) / float64(content.GetWidget().Rect.Dy()) * 1000))
 	}
 	//Create a vertical Slider bar to control the ScrollableContainer
 	vSlider := widget.NewSlider(
@@ -117,7 +73,7 @@ func main() {
 		widget.SliderOpts.PageSizeFunc(pageSizeFunc),
 		//On change update scroll location based on the Slider's value
 		widget.SliderOpts.ChangedHandler(func(args *widget.SliderChangedEventArgs) {
-			scrollContainer.ScrollTop = float64(args.Slider.Current) / 1000
+			scrollContainerW.ScrollTop = float64(args.Slider.Current) / 1000
 		}),
 		widget.SliderOpts.Images(
 			// Set the track images
@@ -134,7 +90,7 @@ func main() {
 		),
 	)
 	//Set the slider's position if the scrollContainer is scrolled by other means than the slider
-	scrollContainer.GetWidget().ScrolledEvent.AddHandler(func(args interface{}) {
+	scrollContainerW.GetWidget().ScrolledEvent.AddHandler(func(args interface{}) {
 		a := args.(*widget.WidgetScrolledEventArgs)
 		p := pageSizeFunc() / 3
 		if p < 1 {
@@ -144,42 +100,47 @@ func main() {
 	})
 
 	//Add the slider to the second slot in the root container
-	innerContainer1 := widget.NewContainer(
+	scrollC := widget.NewContainer(
 		// the container will use an grid layout to layout its ScrollableContainer and Slider
 		widget.ContainerOpts.Layout(widget.NewGridLayout(
 			widget.GridLayoutOpts.Columns(2),
 			widget.GridLayoutOpts.Padding(widget.Insets{
-				Top: 200,
+				//Top: 200,
 			}),
 
 			widget.GridLayoutOpts.Spacing(2, 0),
 			widget.GridLayoutOpts.Stretch([]bool{true, false}, []bool{true}),
 		)),
+		widget.ContainerOpts.WidgetOpts(
+			func(w *widget.Widget) {
+				w.Visibility = widget.Visibility_Hide
+			},
+		),
 	)
-	innerContainer2 := widget.NewContainer(
+	normalBtnC := widget.NewContainer(
 		// the container will use an grid layout to layout its ScrollableContainer and Slider
 		widget.ContainerOpts.Layout(widget.NewGridLayout(
 			widget.GridLayoutOpts.Columns(1),
 			widget.GridLayoutOpts.Padding(widget.Insets{
-				Top: 200,
+				//Top: 200,
 			}),
 			widget.GridLayoutOpts.Spacing(2, 0),
 			widget.GridLayoutOpts.Stretch([]bool{true}, []bool{true}),
 		)),
 	)
-	innerContainer3 := widget.NewContainer(
+	switchC := widget.NewContainer(
 		// the container will use an grid layout to layout its ScrollableContainer and Slider
 		widget.ContainerOpts.Layout(widget.NewGridLayout(
 			widget.GridLayoutOpts.Columns(1),
 			widget.GridLayoutOpts.Padding(widget.Insets{
-				Bottom: 200,
+				//Bottom: 200,
 			}),
 
 			widget.GridLayoutOpts.Spacing(2, 0),
 			widget.GridLayoutOpts.Stretch([]bool{true}, []bool{true}),
 		)),
 	)
-	lastBtn := widget.NewButton(
+	normalBtn := widget.NewButton(
 		// set general widget options
 		widget.ButtonOpts.WidgetOpts(
 			// instruct the container's anchor layout to center the button both horizontally and vertically
@@ -190,7 +151,7 @@ func main() {
 		widget.ButtonOpts.Image(buttonImage),
 
 		// specify the button's text, the font face, and the color
-		widget.ButtonOpts.Text("LAST!", face, &widget.ButtonTextColor{
+		widget.ButtonOpts.Text("Normal Button", face, &widget.ButtonTextColor{
 			Idle: color.NRGBA{0xdf, 0xf4, 0xff, 0xff},
 		}),
 
@@ -204,16 +165,18 @@ func main() {
 
 		// add a handler that reacts to clicking the button
 		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
-			println("Button Clicked!")
+			println("normal button clicked")
 		}),
 	)
 
-	innerContainer1.AddChild(scrollContainer)
-	innerContainer1.AddChild(vSlider)
+	scrollC.AddChild(
+		scrollContainerW,
+		vSlider,
+	)
 
-	innerContainer2.AddChild(lastBtn)
+	normalBtnC.AddChild(normalBtn)
 
-	innerContainer3.AddChild(
+	switchC.AddChild(
 		widget.NewButton(
 			// set general widget options
 			widget.ButtonOpts.WidgetOpts(
@@ -238,22 +201,23 @@ func main() {
 
 			// add a handler that reacts to clicking the button
 			widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
-				if innerContainer1.GetWidget().Visibility == widget.Visibility_Show {
-					innerContainer1.GetWidget().Visibility = widget.Visibility_Hide
-					innerContainer2.GetWidget().Visibility = widget.Visibility_Show
+				if scrollC.GetWidget().Visibility == widget.Visibility_Show {
+					scrollC.GetWidget().Visibility = widget.Visibility_Hide
+					normalBtnC.GetWidget().Visibility = widget.Visibility_Show
 				} else {
-					innerContainer1.GetWidget().Visibility = widget.Visibility_Show
-					innerContainer2.GetWidget().Visibility = widget.Visibility_Hide
+					scrollC.GetWidget().Visibility = widget.Visibility_Show
+					normalBtnC.GetWidget().Visibility = widget.Visibility_Hide
 				}
 			}),
 		),
 	)
 
-	rootContainer.AddChild(innerContainer1)
-	rootContainer.AddChild(innerContainer2)
-	rootContainer.AddChild(innerContainer3)
+	rootContainer.AddChild(
+		scrollC,
+		normalBtnC,
+		switchC,
+	)
 
-	innerContainer1.GetWidget().Visibility = widget.Visibility_Hide
 	// construct the UI
 	ui := ebitenui.UI{
 		Container: rootContainer,
@@ -264,11 +228,7 @@ func main() {
 	ebiten.SetWindowTitle("Ebiten UI - Scroll Container")
 
 	game := game{
-		ui:              &ui,
-		scrollContainer: scrollContainer,
-		button:          btn1,
-		innerContainer1: innerContainer1,
-		innerContainer2: innerContainer2,
+		ui: &ui,
 	}
 
 	// run Ebiten main loop
@@ -292,9 +252,6 @@ func (g *game) Update() error {
 
 // Draw implements Ebiten's Draw method.
 func (g *game) Draw(screen *ebiten.Image) {
-	// draw the UI onto the screen
-	//g.innerContainer1.GetWidget().Visibility = widget.Visibility_Hide
-	//g.innerContainer2.GetWidget().Visibility = widget.Visibility_Show
 	g.ui.Draw(screen)
 }
 
@@ -312,15 +269,15 @@ func loadButtonImage() (*widget.ButtonImage, error) {
 	}, nil
 }
 
-func loadFont(size float64) (font.Face, error) {
-	ttfFont, err := truetype.Parse(goregular.TTF)
+func loadFont(size float64) (text.Face, error) {
+	s, err := text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))
 	if err != nil {
+		log.Fatal(err)
 		return nil, err
 	}
 
-	return truetype.NewFace(ttfFont, &truetype.Options{
-		Size:    size,
-		DPI:     72,
-		Hinting: font.HintingFull,
-	}), nil
+	return &text.GoTextFace{
+		Source: s,
+		Size:   size,
+	}, nil
 }
