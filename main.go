@@ -32,17 +32,23 @@ func main() {
 		// the container will use a plain color as its background
 		widget.ContainerOpts.BackgroundImage(image.NewNineSliceColor(color.NRGBA{0x13, 0x1a, 0x22, 0xff})),
 
-		// the container will use an grid layout to layout its ScrollableContainer and Slider
-		widget.ContainerOpts.Layout(
-			widget.NewStackedLayout(),
-		),
+		widget.ContainerOpts.Layout(widget.NewGridLayout(
+			//Define number of columns in the grid
+			widget.GridLayoutOpts.Columns(1),
+			//Define how much padding to inset the child content
+			widget.GridLayoutOpts.Padding(widget.NewInsetsSimple(30)),
+			//Define how far apart the rows and columns should be
+			widget.GridLayoutOpts.Spacing(20, 10),
+			//Define how to stretch the rows and columns. Note it is required to
+			//specify the Stretch for each row and column.
+			widget.GridLayoutOpts.Stretch([]bool{true, true, true}, []bool{true, true, true}),
+		)),
 	)
 
 	//Create the container with the content that should be scrolled
 	content := widget.NewContainer(
 		widget.ContainerOpts.WidgetOpts(
 			widget.WidgetOpts.MouseButtonPressedHandler(func(args *widget.WidgetMouseButtonPressedEventArgs) {
-				//spew.Dump(args.Widget)
 				fmt.Println("Pressed")
 			}),
 		),
@@ -112,39 +118,35 @@ func main() {
 			widget.GridLayoutOpts.Stretch([]bool{true, false}, []bool{true}),
 		)),
 		widget.ContainerOpts.WidgetOpts(
+			widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
+				StretchHorizontal: true,
+				StretchVertical:   true,
+			}),
 			func(w *widget.Widget) {
 				w.Visibility = widget.Visibility_Hide
 			},
 		),
 	)
 	normalBtnC := widget.NewContainer(
-		// the container will use an grid layout to layout its ScrollableContainer and Slider
-		widget.ContainerOpts.Layout(widget.NewGridLayout(
-			widget.GridLayoutOpts.Columns(1),
-			widget.GridLayoutOpts.Padding(widget.Insets{
-				//Top: 200,
+		widget.ContainerOpts.Layout(widget.NewAnchorLayout()),
+		widget.ContainerOpts.WidgetOpts(
+			widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
+				StretchHorizontal: true,
+				StretchVertical:   true,
 			}),
-			widget.GridLayoutOpts.Spacing(2, 0),
-			widget.GridLayoutOpts.Stretch([]bool{true}, []bool{true}),
-		)),
+		),
 	)
 	switchC := widget.NewContainer(
-		// the container will use an grid layout to layout its ScrollableContainer and Slider
-		widget.ContainerOpts.Layout(widget.NewGridLayout(
-			widget.GridLayoutOpts.Columns(1),
-			widget.GridLayoutOpts.Padding(widget.Insets{
-				//Bottom: 200,
-			}),
-
-			widget.GridLayoutOpts.Spacing(2, 0),
-			widget.GridLayoutOpts.Stretch([]bool{true}, []bool{true}),
-		)),
+		widget.ContainerOpts.Layout(widget.NewAnchorLayout()),
 	)
 	normalBtn := widget.NewButton(
 		// set general widget options
 		widget.ButtonOpts.WidgetOpts(
 			// instruct the container's anchor layout to center the button both horizontally and vertically
-			widget.WidgetOpts.LayoutData(widget.RowLayoutData{Position: widget.RowLayoutPositionCenter}),
+			widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
+				StretchHorizontal: true,
+				StretchVertical:   true,
+			}),
 		),
 
 		// specify the images to use
@@ -180,7 +182,11 @@ func main() {
 		widget.NewButton(
 			// set general widget options
 			widget.ButtonOpts.WidgetOpts(
-			// instruct the container's anchor layout to center the button both horizontally and vertically
+				// instruct the container's anchor layout to center the button both horizontally and vertically
+				widget.WidgetOpts.LayoutData(widget.AnchorLayoutData{
+					StretchHorizontal: true,
+					StretchVertical:   true,
+				}),
 			),
 
 			// specify the images to use
@@ -212,11 +218,23 @@ func main() {
 		),
 	)
 
-	rootContainer.AddChild(
+	contentsC := widget.NewContainer(
+		widget.ContainerOpts.Layout(widget.NewAnchorLayout()),
+	)
+	contentsC.AddChild(
 		scrollC,
 		normalBtnC,
-		switchC,
 	)
+
+	//wrapperGC.AddChild(
+	rootContainer.AddChild(
+		switchC,
+		contentsC,
+	)
+
+	//rootContainer.AddChild(
+	//wrapperGC,
+	//)
 
 	// construct the UI
 	ui := ebitenui.UI{
